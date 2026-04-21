@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>계약 갱신 평가 시스템</title>
+<style>
+:root {
+  --bg:       #F4F3EF;
+  --surface:  #FFFFFF;
+  --border:   #E2E0D8;
+  --border2:  #CCCAB8;
+  --text:     #1C1C1A;
+  --muted:    #7A7870;
+  --hint:     #B0AEA4;
+  --accent:   #1C1C1A;
+  --teal:     #1D9E75;
+  --teal-bg:  #E1F5EE;
+  --teal-bd:  #5DCAA5;
+  --red:      #C0392B;
+  --red-bg:   #FDECEA;
+  --red-bd:   #E8A49A;
+  --amber:    #BA7517;
+  --amber-bg: #FAEEDA;
+  --gray-bg:  #F1EFE8;
+  --radius:   12px;
+  --radius-sm:8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; padding-bottom: 6rem;
+}
+
+/* ── 헤더 ── */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 2rem; position: sticky; top: 0; z-index: 100;
+}
+.header-inner {
+  max-width: 800px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; height: 56px;
+}
+.logo { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.logo span { color: var(--teal); }
+.secure-pill {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: var(--teal-bg); color: var(--teal);
+  border: 0.5px solid var(--teal-bd); font-weight: 500;
+}
+
+/* ── 스텝 바 ── */
+.steps-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; }
+.steps-inner {
+  max-width: 800px; margin: 0 auto;
+  display: flex; align-items: stretch; height: 52px;
+}
+.step-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 0 20px; font-size: 13px; font-weight: 500;
+  color: var(--hint); border-bottom: 2.5px solid transparent;
+  white-space: nowrap; transition: all 0.2s;
+}
+.step-item.active { color: var(--text); border-bottom-color: var(--accent); }
+.step-item.done   { color: var(--teal); border-bottom-color: var(--teal); }
+.step-num {
+  width: 21px; height: 21px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  background: var(--bg); color: var(--hint); flex-shrink: 0; transition: all 0.2s;
+}
+.step-item.active .step-num { background: var(--accent); color: #fff; }
+.step-item.done   .step-num { background: var(--teal);   color: #fff; }
+.step-div { flex: 1; }
+
+/* ── 메인 ── */
+.main { max-width: 800px; margin: 0 auto; padding: 2rem 2rem 0; }
+.panel { display: none; }
+.panel.active { display: block; }
+.section-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+.section-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem; margin-bottom: 16px;
+}
+.card-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 1rem;
+}
+
+/* ── 폼 요소 ── */
+.field-label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 5px; }
+.field-label .req { color: var(--red); margin-left: 2px; }
+input[type=text], input[type=email], input[type=date], textarea {
+  width: 100%; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; color: var(--text); background: var(--surface);
+  font-family: inherit; outline: none; transition: border 0.15s;
+}
+input:focus, textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--hint); }
+textarea { resize: vertical; line-height: 1.6; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.mt { margin-top: 12px; }
+
+/* ── 업로드 존 ── */
+.upload-zone {
+  border: 1.5px dashed var(--border2); border-radius: var(--radius);
+  padding: 2.5rem 2rem; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: var(--bg); user-select: none;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--teal); background: var(--teal-bg); }
+.upload-icon { font-size: 34px; margin-bottom: 10px; }
+.upload-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.upload-sub   { font-size: 13px; color: var(--muted); }
+#file-input { display: none; }
+.file-ok {
+  display: none; align-items: center; gap: 12px;
+  background: var(--teal-bg); border: 1px solid var(--teal-bd);
+  border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 12px;
+}
+.file-ok.show { display: flex; }
+.file-ok-name  { font-size: 13px; font-weight: 600; color: var(--teal); }
+.file-ok-count { font-size: 12px; color: var(--teal); margin-left: auto; }
+.btn-reup {
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--teal-bd); background: transparent; color: var(--teal);
+  cursor: pointer; font-family: inherit;
+}
+
+/* ── 에러 ── */
+.err {
+  display: none; background: var(--red-bg); border: 1px solid var(--red-bd);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-size: 13px; color: var(--red); margin-top: 10px;
+}
+.err.show { display: block; }
+
+/* ── 버튼 ── */
+.btn-primary {
+  padding: 11px 22px; border-radius: var(--radius-sm);
+  border: none; background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.8; }
+.btn-ghost {
+  padding: 11px 18px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: background 0.12s;
+}
+.btn-ghost:hover { background: var(--bg); }
+
+/* ── STEP 2: 이메일 입력 ── */
+.email-row { display: flex; gap: 8px; }
+.email-row input { flex: 1; }
+
+/* ── 평가자 프로필 ── */
+.ev-card {
+  display: none; background: var(--bg); border-radius: var(--radius-sm);
+  padding: 14px 18px; margin-top: 12px;
+}
+.ev-card.show { display: block; }
+.ev-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.ev-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; flex-shrink: 0;
+}
+.ev-name { font-size: 16px; font-weight: 700; }
+.ev-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.ev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.ev-cell label { font-size: 11px; color: var(--hint); display: block; margin-bottom: 2px; }
+.ev-cell span  { font-size: 13px; font-weight: 600; }
+.ev-target-summary {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-size: 13px; color: var(--muted);
+}
+.ev-target-summary strong { color: var(--text); }
+.ev-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+/* ── STEP 3: 대상자 카드 ── */
+.subj-bar {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.subj-title { font-size: 16px; font-weight: 700; }
+.count-tag {
+  font-size: 12px; padding: 3px 10px; border-radius: 20px;
+  background: var(--gray-bg); color: var(--muted); margin-left: 8px;
+}
+.summary-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.s-badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+.s-renew { background: var(--teal-bg); color: var(--teal); }
+.s-end   { background: var(--red-bg);  color: var(--red); }
+
+.subj-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 10px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+.subj-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.subj-num {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--muted); text-transform: uppercase;
+  background: var(--bg); padding: 3px 10px; border-radius: 20px;
+}
+
+/* 읽기전용 필드 (인사마스터에서 불러온 값) */
+.readonly-field {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 14px;
+  font-size: 14px; color: var(--text); font-family: inherit;
+}
+.readonly-hint { font-size: 11px; color: var(--hint); margin-top: 3px; }
+
+/* 결정 버튼 (2개) */
+.decision-row { display: flex; gap: 10px; }
+.d-btn {
+  flex: 1; padding: 14px 4px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; text-align: center; transition: all 0.12s; font-family: inherit;
+}
+.d-btn:hover { border-color: var(--border2); }
+.d-btn .d-icon  { font-size: 20px; margin-bottom: 4px; }
+.d-btn .d-label { font-size: 14px; font-weight: 700; color: var(--hint); }
+.d-btn .d-sub   { font-size: 11px; color: var(--hint); margin-top: 2px; }
+.d-btn.sel-renew {
+  border: 2px solid var(--teal); background: var(--teal-bg);
+}
+.d-btn.sel-renew .d-label { color: var(--teal); }
+.d-btn.sel-renew .d-sub   { color: #0F6E56; }
+.d-btn.sel-end {
+  border: 2px solid var(--red); background: var(--red-bg);
+}
+.d-btn.sel-end .d-label { color: var(--red); }
+.d-btn.sel-end .d-sub   { color: #8B2318; }
+
+/* 의견 글자수 */
+.textarea-wrap { position: relative; }
+.char-counter {
+  position: absolute; bottom: 10px; right: 12px;
+  font-size: 11px; color: var(--hint); pointer-events: none;
+}
+.char-counter.warn { color: var(--amber); }
+.char-counter.over { color: var(--red);   }
+
+/* ── 기본 정보 ── */
+.info-box {
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 10px 14px; font-size: 12.5px; color: var(--muted);
+  line-height: 1.7; margin-top: 8px;
+}
+
+/* ── 제출 ── */
+.submit-area { margin-top: 1.5rem; }
+.submit-row  { display: flex; gap: 10px; }
+.btn-submit {
+  flex: 1; padding: 14px; border-radius: var(--radius-sm);
+  border: none; background: var(--accent); color: #fff;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: opacity 0.15s; letter-spacing: -0.2px;
+}
+.btn-submit:hover { opacity: 0.82; }
+.submit-note {
+  font-size: 12px; color: var(--hint); text-align: center; margin-top: 8px; line-height: 1.7;
+}
+
+/* ── 성공 ── */
+.success-box {
+  display: none; background: var(--teal-bg);
+  border: 1px solid var(--teal-bd); border-radius: var(--radius);
+  padding: 1.5rem; margin-top: 1rem;
+}
+.success-title { font-size: 16px; font-weight: 700; color: var(--teal); margin-bottom: 10px; }
+.success-item  {
+  font-size: 13px; color: #0F6E56; padding: 8px 0; border-top: 1px solid #9FE1CB;
+  display: flex; align-items: center; gap: 10px;
+}
+.s-decision-tag {
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap;
+}
+.s-decision-tag.renew { background: #9FE1CB; color: #085041; }
+.s-decision-tag.end   { background: #F7C1C1; color: #7A1C1C; }
+
+@media (max-width: 600px) {
+  .grid2, .grid3, .ev-grid { grid-template-columns: 1fr; }
+  .main { padding: 1.25rem 1rem 0; }
+  .steps-inner { overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">계약갱신<span>평가</span></div>
+    <div class="secure-pill">🔒 로컬 전용 — 외부 전송 없음</div>
+  </div>
+</header>
+
+<nav class="steps-bar">
+  <div class="steps-inner">
+    <div class="step-item active" id="si-1"><div class="step-num">1</div>파일 업로드</div>
+    <div class="step-div"></div>
+    <div class="step-item" id="si-2"><div class="step-num">2</div>평가자 확인</div>
+    <div class="step-div"></div>
+    <div class="step-item" id="si-3"><div class="step-num">3</div>평가 작성 및 제출</div>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- ════ STEP 1 ════ -->
+  <div class="panel active" id="panel-1">
+    <h1 class="section-title">인사마스터 파일 업로드</h1>
+    <p class="section-sub">
+      제공된 <strong>인사마스터_템플릿.xlsx</strong> 파일에 데이터를 채운 뒤 업로드하세요.<br>
+      파일은 브라우저 메모리에서만 처리되며 외부로 전송되지 않습니다.
+    </p>
+    <div class="card">
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">📂</div>
+        <p class="upload-title">엑셀 파일을 클릭하거나 끌어다 놓으세요</p>
+        <p class="upload-sub">인사마스터_템플릿.xlsx · 2개 시트 포함</p>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(event)"/>
+      <div class="file-ok" id="file-ok">
+        <span style="font-size:18px">✅</span>
+        <span class="file-ok-name" id="file-name"></span>
+        <span class="file-ok-count" id="file-count"></span>
+        <button class="btn-reup" onclick="document.getElementById('file-input').click()">재업로드</button>
+      </div>
+      <div class="err" id="err-file"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn-primary" id="btn1-next" style="display:none" onclick="goStep(2)">다음 — 평가자 확인 →</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 2 ════ -->
+  <div class="panel" id="panel-2">
+    <h1 class="section-title">평가자 확인</h1>
+    <p class="section-sub">본인의 이메일 주소를 입력하면 담당 피평가자 목록을 자동으로 불러옵니다.</p>
+    <div class="card">
+      <div class="card-label">이메일로 본인 확인</div>
+      <div class="field">
+        <label class="field-label">이메일 주소 <span class="req">*</span></label>
+        <div class="email-row">
+          <input type="email" id="ev-email-input" placeholder="myname@company.com"
+            onkeydown="if(event.key==='Enter') lookupEvaluator()"/>
+          <button class="btn-primary" onclick="lookupEvaluator()">확인</button>
+        </div>
+      </div>
+      <div class="err" id="err-ev"></div>
+
+      <!-- 평가자 확인 카드 -->
+      <div class="ev-card" id="ev-card">
+        <div class="ev-row">
+          <div class="ev-avatar" id="ev-av"></div>
+          <div>
+            <div class="ev-name" id="ev-nm"></div>
+            <div class="ev-meta" id="ev-mt"></div>
+          </div>
+        </div>
+        <div class="ev-grid">
+          <div class="ev-cell"><label>사번</label><span id="ev-id">-</span></div>
+          <div class="ev-cell"><label>직급</label><span id="ev-gr">-</span></div>
+          <div class="ev-cell"><label>부서</label><span id="ev-dp">-</span></div>
+        </div>
+        <div class="ev-target-summary" id="ev-ts"></div>
+        <div class="ev-actions">
+          <button class="btn-ghost" onclick="resetStep2()">다시 입력</button>
+          <button class="btn-primary" onclick="goStep(3)">평가 시작 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ STEP 3 ════ -->
+  <div class="panel" id="panel-3">
+    <h1 class="section-title">평가 작성</h1>
+    <p class="section-sub">인사마스터에서 불러온 담당 피평가자 목록입니다. 각 항목을 검토하고 결정을 선택해 주세요.</p>
+
+    <!-- 평가 기본 정보 -->
+    <div class="card">
+      <div class="card-label">평가 기본 정보</div>
+      <div class="grid2">
+        <div class="field">
+          <label class="field-label">평가 일자</label>
+          <input type="date" id="eval-date"/>
+        </div>
+        <div class="field">
+          <label class="field-label">확인 메일 수신 주소 <span class="req">*</span></label>
+          <input type="email" id="my-email" placeholder="myname@company.com"/>
+        </div>
+      </div>
+      <div class="info-box">
+        제출 버튼을 누르면 Outlook(기본 메일 앱)이 열리면서 평가 내용이 담긴 이메일 초안이 자동 작성됩니다.
+      </div>
+    </div>
+
+    <!-- 대상자 목록 -->
+    <div class="subj-bar">
+      <div style="display:flex;align-items:center;">
+        <span class="subj-title">피평가자 목록</span>
+        <span class="count-tag" id="count-tag">0명</span>
+      </div>
+    </div>
+    <div id="summary-row" class="summary-row"></div>
+    <div id="subjects-wrap"></div>
+
+    <div class="submit-area">
+      <div class="submit-row">
+        <button class="btn-ghost" onclick="resetAll()">처음부터</button>
+        <button class="btn-submit" onclick="submitAll()">평가 제출</button>
+      </div>
+      <p class="submit-note">
+        ※ 모든 데이터는 내 컴퓨터 안에서만 처리됩니다.<br>
+        Outlook이 열리지 않으면 브라우저 팝업 차단을 해제해 주세요.
+      </p>
+    </div>
+    <div class="success-box" id="success-box">
+      <div class="success-title" id="success-title"></div>
+      <div id="success-items"></div>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ━━ 상태 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const MAX_CHARS = 500;
+let hrMap    = {};   // 사번 → 직원 row
+let mappings = [];   // [{evalEmail, targetId}]
+let evaluator = null;
+let subjects  = [];  // 불러온 피평가자 목록
+
+// ━━ 컬럼 매핑 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const COLS = {
+  id:        ['사번','employee_id','empid','사원번호','직원번호','emp_no'],
+  name:      ['이름','성명','name','직원명','사원명'],
+  dept:      ['부서','부서명','department','dept','팀','팀명'],
+  grade:     ['직급','직책','grade','rank','직위','position'],
+  email:     ['이메일','email','mail','e-mail','이메일주소'],
+  role:      ['직무','job','직종','role','담당업무','업무'],
+  startDate: ['계약시작일','계약_시작일','start_date','startdate','계약시작','입사일'],
+  endDate:   ['계약만료일','계약_만료일','end_date','enddate','계약만료','만료일'],
+  evalEmail: ['평가자이메일','evaluator_email','평가자email','담당평가자'],
+  targetId:  ['대상자사번','target_id','피평가자사번','대상사번'],
+};
+const norm    = s => String(s||'').replace(/\s/g,'').toLowerCase();
+const findCol = (hdrs, keys) => {
+  const nh = hdrs.map(norm);
+  for (const k of keys) { const i = nh.indexOf(norm(k)); if (i!==-1) return hdrs[i]; }
+  return null;
+};
+const getVal  = (row, keys) => {
+  const hdrs = Object.keys(row);
+  const col  = findCol(hdrs, keys);
+  return col ? String(row[col]||'').trim() : '';
+};
+
+// ━━ 스텝 전환 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function goStep(n) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  [1,2,3].forEach(i=>{
+    const el=document.getElementById('si-'+i);
+    el.classList.remove('active','done');
+    if(i<n) el.classList.add('done'); else if(i===n) el.classList.add('active');
+  });
+  if(n===3) renderSubjects();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ━━ STEP 1: 파일 업로드 ━━━━━━━━━━━━━━━━━
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{
+  e.preventDefault();zone.classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) processFile(f);
+});
+function handleFile(e){const f=e.target.files[0];if(f) processFile(f);}
+
+function processFile(file) {
+  showErr('err-file','');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+
+      // ① 인사마스터 시트
+      const ws1name = wb.SheetNames.find(n=>n.includes('인사마스터')||n.toLowerCase().includes('master')) || wb.SheetNames[0];
+      const hr = XLSX.utils.sheet_to_json(wb.Sheets[ws1name], {defval:''});
+      if (!hr.length) { showErr('err-file','인사마스터 시트에 데이터가 없습니다.'); return; }
+
+      const hdrs1  = Object.keys(hr[0]);
+      const colId  = findCol(hdrs1, COLS.id);
+      const colEm  = findCol(hdrs1, COLS.email);
+      if (!colId || !colEm) {
+        showErr('err-file','인사마스터 시트에 "사번" 또는 "이메일" 컬럼을 찾을 수 없습니다.');
+        return;
+      }
+      hrMap = {};
+      hr.forEach(row => { const id=String(row[colId]||'').trim(); if(id) hrMap[id]=row; });
+
+      // ② 평가자매핑 시트
+      const ws2name = wb.SheetNames.find(n=>n.includes('매핑')||n.toLowerCase().includes('mapping'));
+      if (!ws2name) {
+        showErr('err-file','"평가자매핑" 시트를 찾을 수 없습니다. 템플릿 파일을 사용해 주세요.');
+        return;
+      }
+      const mp = XLSX.utils.sheet_to_json(wb.Sheets[ws2name], {defval:''});
+      if (!mp.length) { showErr('err-file','평가자매핑 시트에 데이터가 없습니다.'); return; }
+
+      const hdrs2   = Object.keys(mp[0]);
+      const colEv   = findCol(hdrs2, COLS.evalEmail);
+      const colTg   = findCol(hdrs2, COLS.targetId);
+      if (!colEv || !colTg) {
+        showErr('err-file','매핑 시트에 "평가자이메일" 또는 "대상자사번" 컬럼을 찾을 수 없습니다.');
+        return;
+      }
+      mappings = mp.map(row=>({
+        evalEmail: norm(row[colEv]),
+        targetId:  String(row[colTg]||'').trim(),
+      })).filter(r=>r.evalEmail && r.targetId);
+
+      document.getElementById('file-name').textContent  = file.name;
+      document.getElementById('file-count').textContent = `인사마스터 ${Object.keys(hrMap).length}명 · 매핑 ${mappings.length}건`;
+      document.getElementById('file-ok').classList.add('show');
+      document.getElementById('btn1-next').style.display='inline-block';
+
+    } catch(err) {
+      showErr('err-file','파일을 읽는 중 오류가 발생했습니다. 올바른 .xlsx 파일인지 확인해 주세요.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ━━ STEP 2: 평가자 이메일로 조회 ━━━━━━━━━
+function lookupEvaluator() {
+  const email = document.getElementById('ev-email-input').value.trim();
+  showErr('err-ev','');
+  if (!email) { showErr('err-ev','이메일 주소를 입력해 주세요.'); return; }
+
+  // 평가자 정보 조회 (인사마스터에서 이메일로 찾기)
+  const normEmail = norm(email);
+  const evRow = Object.values(hrMap).find(row => norm(getVal(row, COLS.email)) === normEmail);
+  if (!evRow) { showErr('err-ev','인사마스터에서 해당 이메일 주소를 찾을 수 없습니다.'); return; }
+
+  // 담당 피평가자 목록 찾기
+  const targetIds = mappings.filter(m=>m.evalEmail===normEmail).map(m=>m.targetId);
+  if (!targetIds.length) { showErr('err-ev','이 이메일로 매핑된 피평가자가 없습니다. 평가자매핑 시트를 확인해 주세요.'); return; }
+
+  // 피평가자 데이터 조회
+  const targets = targetIds.map(id=>hrMap[id]).filter(Boolean);
+  if (!targets.length) { showErr('err-ev','매핑된 사번에 해당하는 직원 정보를 찾을 수 없습니다.'); return; }
+
+  evaluator = {
+    name:  getVal(evRow, COLS.name),
+    dept:  getVal(evRow, COLS.dept),
+    grade: getVal(evRow, COLS.grade),
+    id:    getVal(evRow, COLS.id),
+    email: email,
+  };
+  subjects = targets.map((row,i) => ({
+    idx:   i,
+    id:    getVal(row, COLS.id),
+    name:  getVal(row, COLS.name),
+    dept:  getVal(row, COLS.dept),
+    role:  getVal(row, COLS.role),
+    start: getVal(row, COLS.startDate),
+    end:   getVal(row, COLS.endDate),
+    decision: '',
+  }));
+
+  // 카드 표시
+  const init = (evaluator.name||'?')[0];
+  document.getElementById('ev-av').textContent = init;
+  document.getElementById('ev-nm').textContent = evaluator.name||'-';
+  document.getElementById('ev-mt').textContent = [evaluator.dept,evaluator.grade].filter(Boolean).join(' · ');
+  document.getElementById('ev-id').textContent = evaluator.id||'-';
+  document.getElementById('ev-gr').textContent = evaluator.grade||'-';
+  document.getElementById('ev-dp').textContent = evaluator.dept||'-';
+  document.getElementById('ev-ts').innerHTML   =
+    `담당 피평가자 <strong>${subjects.length}명</strong> — ${subjects.map(s=>s.name).join(', ')}`;
+  document.getElementById('my-email').value    = email;
+  document.getElementById('ev-card').classList.add('show');
+}
+
+function resetStep2() {
+  evaluator=null; subjects=[];
+  document.getElementById('ev-card').classList.remove('show');
+  document.getElementById('ev-email-input').value='';
+  document.getElementById('ev-email-input').focus();
+  showErr('err-ev','');
+}
+
+// ━━ STEP 3: 피평가자 카드 렌더링 ━━━━━━━━━
+function setDecision(idx, d) {
+  subjects[idx].decision = d;
+  updateDecisionUI(idx, d);
+  updateSummary();
+}
+
+function saveOpinions() {
+  subjects.forEach((s,i) => {
+    const ta = document.getElementById('op-'+i);
+    if (ta) s._opinion = ta.value;
+  });
+}
+
+function restoreOpinions() {
+  subjects.forEach((s,i) => {
+    const ta = document.getElementById('op-'+i);
+    if (ta && s._opinion !== undefined) ta.value = s._opinion;
+  });
+}
+
+function updateSummary() {
+  const counts = {renew:0, end:0};
+  subjects.forEach(s=>{ if(s.decision) counts[s.decision]++; });
+  document.getElementById('summary-row').innerHTML =
+    [counts.renew&&`<span class="s-badge s-renew">재계약 ${counts.renew}명</span>`,
+     counts.end  &&`<span class="s-badge s-end">계약종료 ${counts.end}명</span>`]
+    .filter(Boolean).join('');
+  const badge = document.getElementById('sc-hdr-badge');
+}
+
+function updateDecisionUI(idx, d) {
+  const card = document.getElementById('sc-'+idx);
+  if (!card) return;
+  const dl = {renew:'재계약', end:'계약종료'};
+  const hdr = card.querySelector('.subj-decision-badge');
+  if (hdr) {
+    hdr.className = 'subj-decision-badge s-badge ' + (d ? (d==='renew'?'s-renew':'s-end') : '');
+    hdr.textContent = d ? dl[d] : '결정 미선택';
+    if (!d) hdr.style.color = 'var(--hint)';
+  }
+  ['renew','end'].forEach(key => {
+    const btn = card.querySelector('.d-btn-'+key);
+    if (btn) btn.className = 'd-btn d-btn-'+key + (d===key ? ' sel-'+key : '');
+  });
+  updateSummary();
+}
+
+function renderSubjects() {
+  saveOpinions();
+  document.getElementById('count-tag').textContent = subjects.length+'명';
+
+  const counts = {renew:0, end:0};
+  subjects.forEach(s=>{ if(s.decision) counts[s.decision]++; });
+  document.getElementById('summary-row').innerHTML =
+    [counts.renew&&`<span class="s-badge s-renew">재계약 ${counts.renew}명</span>`,
+     counts.end  &&`<span class="s-badge s-end">계약종료 ${counts.end}명</span>`]
+    .filter(Boolean).join('');
+
+  document.getElementById('subjects-wrap').innerHTML = subjects.map((s,i)=>{
+    const isRenew = s.decision==='renew';
+    const isEnd   = s.decision==='end';
+    return `
+    <div class="subj-card" id="sc-${i}">
+      <div class="subj-header">
+        <span class="subj-num">피평가자 ${i+1}</span>
+        <span class="subj-decision-badge s-badge ${s.decision ? (s.decision==='renew'?'s-renew':'s-end') : ''}" style="${!s.decision?'color:var(--hint);background:none;':''}">
+          ${s.decision ? (s.decision==='renew'?'재계약':'계약종료') : '결정 미선택'}
+        </span>
+      </div>
+
+      <!-- 인사마스터 자동 입력 (읽기 전용) -->
+      <div class="grid3" style="margin-bottom:12px">
+        <div class="field">
+          <label class="field-label">이름</label>
+          <div class="readonly-field">${s.name||'-'}</div>
+          <span class="readonly-hint">인사마스터 연동</span>
+        </div>
+        <div class="field">
+          <label class="field-label">부서</label>
+          <div class="readonly-field">${s.dept||'-'}</div>
+          <span class="readonly-hint">인사마스터 연동</span>
+        </div>
+        <div class="field">
+          <label class="field-label">직무</label>
+          <div class="readonly-field">${s.role||'-'}</div>
+          <span class="readonly-hint">인사마스터 연동</span>
+        </div>
+      </div>
+      <div class="grid2" style="margin-bottom:14px">
+        <div class="field">
+          <label class="field-label">계약 시작일</label>
+          <div class="readonly-field">${s.start||'-'}</div>
+          <span class="readonly-hint">인사마스터 연동</span>
+        </div>
+        <div class="field">
+          <label class="field-label">계약 만료일</label>
+          <div class="readonly-field">${s.end||'-'}</div>
+          <span class="readonly-hint">인사마스터 연동</span>
+        </div>
+      </div>
+
+      <!-- 평가 결정 -->
+      <div style="margin-bottom:14px">
+        <label class="field-label">평가 결정 <span class="req">*</span></label>
+        <div class="decision-row" style="margin-top:8px">
+          <button class="d-btn d-btn-renew${isRenew?' sel-renew':''}" onclick="setDecision(${i},'renew')">
+            <div class="d-icon">✅</div>
+            <div class="d-label">재계약</div>
+            <div class="d-sub">계약 연장</div>
+          </button>
+          <button class="d-btn d-btn-end${isEnd?' sel-end':''}" onclick="setDecision(${i},'end')">
+            <div class="d-icon">🔚</div>
+            <div class="d-label">계약종료</div>
+            <div class="d-sub">계약 만료 처리</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 평가 의견 -->
+      <div class="field">
+        <label class="field-label">평가 의견 <span style="font-weight:400;color:var(--hint)">(최대 ${MAX_CHARS}자)</span></label>
+        <div class="textarea-wrap">
+          <textarea id="op-${i}" rows="4" maxlength="${MAX_CHARS}"
+            placeholder="업무 성과, 태도, 협업 역량 등 종합 의견을 작성해 주세요..."
+            oninput="updateCounter(${i})"
+          ></textarea>
+          <span class="char-counter" id="cc-${i}">0 / ${MAX_CHARS}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  restoreOpinions();
+}
+
+function updateCounter(i) {
+  const ta  = document.getElementById('op-'+i);
+  const cc  = document.getElementById('cc-'+i);
+  const len = ta.value.length;
+  cc.textContent = `${len} / ${MAX_CHARS}`;
+  cc.className   = 'char-counter' + (len >= MAX_CHARS ? ' over' : len >= MAX_CHARS*0.9 ? ' warn' : '');
+}
+
+// ━━ 제출 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const pad  = n => String(n).padStart(2,'0');
+const fmtD = v => {
+  if (!v) return '-';
+  const d = new Date(v);
+  if (isNaN(d)) return v;
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
+};
+
+function submitAll() {
+  if (!evaluator) { alert('평가자 정보가 없습니다. 처음부터 다시 시작해 주세요.'); return; }
+  const myEmail  = document.getElementById('my-email').value.trim();
+  const evalDate = document.getElementById('eval-date').value;
+  if (!myEmail) { alert('확인 메일 수신 주소를 입력해 주세요.'); return; }
+
+  const dlabel = {renew:'✅ 재계약', end:'🔚 계약종료'};
+  const rows = [];
+  for (let i=0; i<subjects.length; i++) {
+    const s = subjects[i];
+    if (!s.decision) { alert(`"${s.name}"의 평가 결정을 선택해 주세요.`); return; }
+    const opinion = (document.getElementById('op-'+i)?.value||'').trim() || '(없음)';
+    rows.push({...s, decision: dlabel[s.decision], opinion});
+  }
+
+  const subj = `[계약 갱신 평가] ${evaluator.name} · ${fmtD(evalDate)} · 총 ${rows.length}명`;
+  let body = '계약 갱신 평가 결과\n'+'='.repeat(48)+'\n';
+  body += `평가자  : ${evaluator.name}${evaluator.dept?' ('+evaluator.dept+')':''}${evaluator.grade?' · '+evaluator.grade:''}\n`;
+  body += `사번    : ${evaluator.id||'-'}\n`;
+  body += `평가일자: ${fmtD(evalDate)}\n`;
+  body += `총 대상자: ${rows.length}명\n\n`;
+  rows.forEach((r,i)=>{
+    body += `[피평가자 ${i+1}] ${r.name}\n`;
+    body += `  부서 / 직무  : ${r.dept||'-'} / ${r.role||'-'}\n`;
+    body += `  계약 기간    : ${fmtD(r.start)} ~ ${fmtD(r.end)}\n`;
+    body += `  평가 결정    : ${r.decision}\n`;
+    body += `  평가 의견    : ${r.opinion}\n`;
+    body += '-'.repeat(44)+'\n';
+  });
+  body += '\n이 메일은 계약 갱신 평가 시스템에서 자동 생성되었습니다.';
+
+  window.location.href = `mailto:${myEmail}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+
+  const box = document.getElementById('success-box');
+  document.getElementById('success-title').textContent = `총 ${rows.length}명의 평가가 완료되었습니다 — Outlook이 열립니다`;
+  document.getElementById('success-items').innerHTML = rows.map(r=>{
+    const cls = r.decision.includes('재계약') ? 'renew' : 'end';
+    return `<div class="success-item">
+      <span>${r.name} · ${r.dept||'-'}</span>
+      <span class="s-decision-tag ${cls}">${r.decision.replace(/[✅🔚]/g,'').trim()}</span>
+    </div>`;
+  }).join('');
+  box.style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+
+function resetAll() {
+  if (!confirm('처음부터 다시 시작하시겠습니까?')) return;
+  hrMap={}; mappings=[]; evaluator=null; subjects=[];
+  document.getElementById('file-input').value='';
+  document.getElementById('file-ok').classList.remove('show');
+  document.getElementById('btn1-next').style.display='none';
+  document.getElementById('ev-email-input').value='';
+  document.getElementById('ev-card').classList.remove('show');
+  document.getElementById('my-email').value='';
+  document.getElementById('success-box').style.display='none';
+  showErr('err-file',''); showErr('err-ev','');
+  goStep(1);
+}
+
+document.getElementById('eval-date').valueAsDate = new Date();
+</script>
+</body>
+</html>
