@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>계약 갱신 평가</title>
+<style>
+:root {
+  --bg:#F4F3EF;--surface:#FFFFFF;--border:#E2E0D8;--border2:#CCCAB8;
+  --text:#1C1C1A;--muted:#7A7870;--hint:#B0AEA4;--accent:#1C1C1A;
+  --teal:#1D9E75;--teal-bg:#E1F5EE;--teal-bd:#5DCAA5;
+  --red:#C0392B;--red-bg:#FDECEA;--red-bd:#E8A49A;
+  --amber:#BA7517;--amber-bg:#FAEEDA;--amber-bd:#EF9F27;
+  --purple:#534AB7;--purple-bg:#EEEDFE;--purple-bd:#AFA9EC;
+  --gray-bg:#F1EFE8;--radius:12px;--radius-sm:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:6rem;}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;position:sticky;top:0;z-index:100;}
+.header-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.logo{font-size:15px;font-weight:700;letter-spacing:-0.3px;}
+.logo span{color:var(--teal);}
+.role-pill{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;display:none;}
+.pill-1st{background:var(--teal-bg);color:var(--teal);border:0.5px solid var(--teal-bd);}
+.pill-2nd{background:var(--purple-bg);color:var(--purple);border:0.5px solid var(--purple-bd);}
+.sso-badge{font-size:11px;padding:3px 10px;border-radius:20px;background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;font-weight:500;}
+.steps-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;}
+.steps-inner{max-width:1400px;margin:0 auto;display:flex;align-items:stretch;height:52px;}
+.step-item{display:flex;align-items:center;gap:9px;padding:0 20px;font-size:13px;font-weight:500;color:var(--hint);border-bottom:2.5px solid transparent;white-space:nowrap;transition:all 0.2s;}
+.step-item.active{color:var(--text);border-bottom-color:var(--accent);}
+.step-item.done{color:var(--teal);border-bottom-color:var(--teal);}
+.step-num{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--bg);color:var(--hint);flex-shrink:0;transition:all 0.2s;}
+.step-item.active .step-num{background:var(--accent);color:#fff;}
+.step-item.done .step-num{background:var(--teal);color:#fff;}
+.step-div{flex:1;}
+.main{max-width:1400px;margin:0 auto;padding:2rem 2rem 0;}
+.panel{display:none;}
+.panel.active{display:block;}
+.section-title{font-size:20px;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;}
+.section-sub{font-size:14px;color:var(--muted);margin-bottom:1.5rem;line-height:1.65;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:16px;}
+.card-label{font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem;}
+input[type=text],input[type=email],input[type=date]{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border 0.15s;}
+input:focus{border-color:var(--accent);}
+input::placeholder{color:var(--hint);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field-label{font-size:13px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;}
+.req{color:var(--red);margin-left:2px;}
+
+/* SSO 로그인 */
+.sso-panel{text-align:center;padding:3rem 2rem;}
+.sso-icon{font-size:48px;margin-bottom:1rem;}
+.sso-title{font-size:18px;font-weight:700;margin-bottom:8px;}
+.sso-desc{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;}
+.btn-sso{display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border-radius:var(--radius-sm);border:none;background:#0078d4;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;}
+.btn-sso:hover{opacity:0.88;}
+.sso-loading{display:none;font-size:13px;color:var(--muted);margin-top:12px;}
+
+/* 평가자 확인 */
+.ev-card{display:none;background:var(--bg);border-radius:var(--radius-sm);padding:14px 18px;margin-top:12px;}
+.ev-card.show{display:block;}
+.ev-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.ev-avatar{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;}
+.ev-avatar.second{background:var(--purple);}
+.ev-name{font-size:16px;font-weight:700;}
+.ev-meta{font-size:13px;color:var(--muted);margin-top:2px;}
+.ev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.ev-cell label{font-size:11px;color:var(--hint);display:block;margin-bottom:2px;}
+.ev-cell span{font-size:13px;font-weight:600;}
+.ev-target-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--muted);}
+.ev-actions{display:flex;gap:8px;margin-top:14px;}
+.second-notice{background:var(--purple-bg);border:1px solid var(--purple-bd);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--purple);margin-top:10px;line-height:1.7;display:none;}
+
+.btn-primary{padding:11px 22px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;}
+.btn-primary:hover{opacity:0.8;}
+.btn-ghost{padding:11px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+.err{display:none;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--red);margin-top:10px;}
+.err.show{display:block;}
+
+/* 테이블 */
+.eval-table-wrap{overflow-x:auto;margin-bottom:16px;}
+.eval-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-width:1100px;}
+.eval-table thead tr{background:var(--accent);}
+.eval-table thead th{padding:12px 14px;font-size:12px;font-weight:600;color:#fff;text-align:left;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.1);}
+.eval-table thead th:last-child{border-right:none;}
+.eval-table thead th.th-2nd{background:#3C3489;}
+.eval-table tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
+.eval-table tbody tr:last-child{border-bottom:none;}
+.eval-table tbody tr:hover{background:var(--bg);}
+.eval-table tbody td{padding:12px 14px;font-size:13px;vertical-align:middle;border-right:1px solid var(--border);}
+.eval-table tbody td:last-child{border-right:none;}
+.readonly-val{color:var(--text);font-weight:500;}
+.readonly-val.muted{color:var(--muted);}
+.first-readonly{background:var(--gray-bg);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;color:var(--muted);line-height:1.6;min-width:160px;}
+.first-decision-tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:4px;}
+.first-renew{background:var(--teal-bg);color:var(--teal);}
+.first-end{background:var(--red-bg);color:var(--red);}
+.first-none{background:var(--gray-bg);color:var(--hint);}
+.grade-badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--gray-bg);color:var(--muted);}
+.grade-badge.s{background:#EEEDFE;color:#3C3489;}
+.grade-badge.a{background:#E1F5EE;color:#085041;}
+.grade-badge.b{background:#E6F1FB;color:#0C447C;}
+.grade-badge.c{background:#FAEEDA;color:#633806;}
+.grade-badge.d{background:#FDECEA;color:#7A1C1C;}
+.decision-cell{display:flex;gap:6px;}
+.d-btn-sm{flex:1;padding:8px 4px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all 0.12s;font-family:inherit;min-width:64px;}
+.d-btn-sm .d-icon{font-size:14px;margin-bottom:2px;}
+.d-btn-sm .d-label{font-size:11px;font-weight:700;color:var(--hint);}
+.d-btn-sm.sel-renew{border:2px solid var(--teal);background:var(--teal-bg);}
+.d-btn-sm.sel-renew .d-label{color:var(--teal);}
+.d-btn-sm.sel-end{border:2px solid var(--red);background:var(--red-bg);}
+.d-btn-sm.sel-end .d-label{color:var(--red);}
+.opinion-input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;color:var(--text);resize:vertical;outline:none;transition:border 0.15s;min-width:280px;min-height:80px;}
+.opinion-input:focus{border-color:var(--accent);}
+.char-info{font-size:11px;color:var(--hint);text-align:right;margin-top:2px;}
+.char-info.warn{color:var(--amber);}
+.char-info.over{color:var(--red);}
+.summary-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.s-badge{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;}
+.s-renew{background:var(--teal-bg);color:var(--teal);}
+.s-end{background:var(--red-bg);color:var(--red);}
+.count-tag{font-size:12px;padding:3px 10px;border-radius:20px;background:var(--gray-bg);color:var(--muted);}
+.pending-warning{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--amber);margin-bottom:10px;display:none;}
+.info-box{background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px;}
+.submit-area{margin-top:1.5rem;}
+.submit-row{display:flex;gap:10px;}
+.btn-submit{flex:1;padding:14px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;}
+.btn-submit:hover{opacity:0.82;}
+.btn-submit.second{background:var(--purple);}
+.submit-note{font-size:12px;color:var(--hint);text-align:center;margin-top:8px;line-height:1.7;}
+.success-box{display:none;background:var(--teal-bg);border:1px solid var(--teal-bd);border-radius:var(--radius);padding:1.5rem;margin-top:1rem;}
+.success-title{font-size:16px;font-weight:700;color:var(--teal);margin-bottom:10px;}
+.success-item{font-size:13px;color:#0F6E56;padding:7px 0;border-top:1px solid #9FE1CB;display:flex;align-items:center;gap:10px;}
+.s-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.s-tag.renew{background:#9FE1CB;color:#085041;}
+.s-tag.end{background:#F7C1C1;color:#7A1C1C;}
+
+/* 제출 진행 표시 */
+.submit-progress{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-top:1rem;text-align:center;}
+.submit-progress.show{display:block;}
+.progress-spinner{font-size:24px;animation:spin 1s linear infinite;display:inline-block;margin-bottom:8px;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.progress-text{font-size:14px;color:var(--muted);}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">계약갱신<span>평가</span></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="role-pill" class="role-pill"></div>
+      <div class="sso-badge" id="sso-user" style="display:none;"></div>
+    </div>
+  </div>
+</header>
+<nav class="steps-bar">
+  <div class="steps-inner">
+    <div class="step-item active" id="si-1"><div class="step-num">1</div>로그인</div>
+    <div class="step-div"></div>
+    <div class="step-item" id="si-2"><div class="step-num">2</div>평가자 확인</div>
+    <div class="step-div"></div>
+    <div class="step-item" id="si-3"><div class="step-num">3</div>평가 작성 및 제출</div>
+  </div>
+</nav>
+<main class="main">
+
+  <!-- 관리자 미설정 -->
+  <div id="not-ready-panel" style="display:none;">
+    <div class="card">
+      <div style="text-align:center;padding:3rem 2rem;">
+        <div style="font-size:48px;margin-bottom:1rem;">🔒</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">관리자 설정이 필요합니다</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.7;">HR 담당자에게 인사마스터 업로드를 요청해 주세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: SSO 로그인 -->
+  <div class="panel" id="panel-1">
+    <div class="card">
+      <div class="sso-panel">
+        <div class="sso-icon">🔐</div>
+        <div class="sso-title">사내 계정으로 로그인</div>
+        <div class="sso-desc">Microsoft 사내 계정(Azure AD)으로 로그인하면<br>본인 이메일이 자동으로 인식되어 평가를 시작할 수 있어요.</div>
+        <button class="btn-sso" onclick="signIn()">
+          <svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
+          Microsoft 계정으로 로그인
+        </button>
+        <div class="sso-loading" id="sso-loading">로그인 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: 평가자 확인 -->
+  <div class="panel" id="panel-2">
+    <h1 class="section-title">평가자 확인</h1>
+    <p class="section-sub">로그인된 계정으로 담당 피평가자 목록을 자동으로 불러옵니다.</p>
+    <div class="card">
+      <div class="card-label">본인 확인</div>
+      <div class="err" id="err-ev"></div>
+      <div class="ev-card show" id="ev-card">
+        <div class="ev-row">
+          <div class="ev-avatar" id="ev-av"></div>
+          <div><div class="ev-name" id="ev-nm"></div><div class="ev-meta" id="ev-mt"></div></div>
+        </div>
+        <div class="ev-grid">
+          <div class="ev-cell"><label>사번</label><span id="ev-id">-</span></div>
+          <div class="ev-cell"><label>직급</label><span id="ev-gr">-</span></div>
+          <div class="ev-cell"><label>이메일</label><span id="ev-ep" style="font-size:12px;">-</span></div>
+        </div>
+        <div class="ev-target-summary" id="ev-ts"></div>
+        <div id="second-notice" class="second-notice"></div>
+        <div class="ev-actions">
+          <button class="btn-ghost" onclick="signOut()">다른 계정으로 로그인</button>
+          <button class="btn-primary" id="btn-start" onclick="goStep(3)">평가 시작 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: 평가 작성 -->
+  <div class="panel" id="panel-3">
+    <h1 class="section-title" id="step3-title">평가 작성</h1>
+    <p class="section-sub" id="step3-sub">담당 피평가자 목록입니다. 각 행에서 재신임 여부를 선택하고 결정 사유를 작성해 주세요.</p>
+
+    <div class="card">
+      <div class="card-label">평가 기본 정보</div>
+      <div class="grid2">
+        <div class="field"><label class="field-label">평가 일자</label><input type="date" id="eval-date"/></div>
+        <div class="field"><label class="field-label">확인 메일 수신 주소 <span class="req">*</span></label><input type="email" id="my-email" placeholder="myname@company.com"/></div>
+      </div>
+      <div class="info-box">제출하면 SharePoint에 결과가 저장되고, Outlook 확인 메일 초안이 자동 작성됩니다.</div>
+    </div>
+
+    <div class="summary-bar">
+      <span style="font-size:15px;font-weight:700;" id="step3-list-title">피평가자 목록</span>
+      <span class="count-tag" id="count-tag">0명</span>
+      <span id="summary-row"></span>
+    </div>
+
+    <div id="pending-warning" class="pending-warning"></div>
+
+    <div class="eval-table-wrap">
+      <table class="eval-table">
+        <thead id="eval-thead"></thead>
+        <tbody id="eval-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="submit-area">
+      <div class="submit-row">
+        <button class="btn-ghost" onclick="goStep(2)">← 이전</button>
+        <button class="btn-submit" id="btn-submit" onclick="submitAll()">평가 제출</button>
+      </div>
+      <p class="submit-note" id="submit-note">※ 제출하면 SharePoint에 자동 저장되고 확인 메일이 발송됩니다.</p>
+    </div>
+
+    <div class="submit-progress" id="submit-progress">
+      <div class="progress-spinner">⏳</div>
+      <div class="progress-text" id="progress-text">SharePoint에 저장 중...</div>
+    </div>
+
+    <div class="success-box" id="success-box">
+      <div class="success-title" id="success-title"></div>
+      <div id="success-items"></div>
+    </div>
+  </div>
+</main>
+
+<!-- MSAL 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
+
+<script>
+// ━━ 설정 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const CLIENT_ID  = '76ae89f8-7fdb-42ba-a337-9a2538e418b0';
+const TENANT_ID  = '1a27bdbf-e6cc-4e33-85d2-e1c81bad930a';
+const SP_SITE    = 'https://blueholestudio.sharepoint.com/sites/KP_workspace';
+const SP_LIST    = 'Contract Evaluation(KP)';
+const MAX_CHARS  = 500;
+const SK_HR      = 'kp_eval_hrdata';
+const SK_MAP     = 'kp_eval_mapping';
+const SK_SUB     = 'kp_eval_submissions';
+
+// ━━ MSAL 초기화 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri: window.location.href.split('?')[0].split('#')[0],
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const loginScopes  = ['User.Read', 'Sites.ReadWrite.All'];
+
+// ━━ 상태 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let hrMap={}, mappings=[], evaluator=null, subjects=[], isSecond=false;
+let accessToken = null;
+
+// ━━ 컬럼 매핑 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const COLS = {
+  id:['사번','employee_id','empid'],
+  name:['이름','성명','name','직원명'],
+  dept:['부서','부서명','department','팀','소속'],
+  grade:['직급','직책','grade','직위'],
+  email:['이메일','email','mail'],
+  role:['직무','job','role'],
+  startDate:['계약시작일','start_date'],
+  endDate:['계약만료일','end_date'],
+  partnerLevel:['파트너레벨등급','파트너레벨','partnerlevel'],
+  perfGrade:['성과등급','성과','perf_grade'],
+  compGrade:['역량등급','역량','comp_grade'],
+  secondEval:['2차평가자이메일','2차평가자','second_evaluator'],
+};
+const norm    = s => String(s||'').replace(/\s/g,'').toLowerCase();
+const findCol = (hdrs,keys) => { const nh=hdrs.map(norm); for(const k of keys){const i=nh.indexOf(norm(k));if(i!==-1)return hdrs[i];} return null; };
+const getVal  = (row,keys) => { const col=findCol(Object.keys(row),keys); return col?String(row[col]||'').trim():''; };
+
+// ━━ 초기화 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function init() {
+  // 관리자 데이터 확인
+  const savedHr  = localStorage.getItem(SK_HR);
+  const savedMap = localStorage.getItem(SK_MAP);
+  if(!savedHr||!savedMap) {
+    document.getElementById('not-ready-panel').style.display='block';
+    return;
+  }
+  try {
+    hrMap    = JSON.parse(savedHr);
+    mappings = JSON.parse(savedMap);
+  } catch(e) {
+    document.getElementById('not-ready-panel').style.display='block';
+    return;
+  }
+
+  // MSAL 리다이렉트 처리
+  try {
+    await msalInstance.initialize();
+    const result = await msalInstance.handleRedirectPromise();
+    if(result) {
+      accessToken = result.accessToken;
+      await onSignedIn(result.account);
+      return;
+    }
+  } catch(e) { console.error(e); }
+
+  // 기존 로그인 세션 확인
+  const accounts = msalInstance.getAllAccounts();
+  if(accounts.length > 0) {
+    try {
+      const tokenResult = await msalInstance.acquireTokenSilent({
+        scopes: loginScopes, account: accounts[0]
+      });
+      accessToken = tokenResult.accessToken;
+      await onSignedIn(accounts[0]);
+      return;
+    } catch(e) {}
+  }
+
+  // 로그인 화면 표시
+  document.getElementById('panel-1').classList.add('active');
+}
+
+// ━━ 로그인 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function signIn() {
+  document.getElementById('sso-loading').style.display='block';
+  try {
+    await msalInstance.loginRedirect({ scopes: loginScopes });
+  } catch(e) {
+    document.getElementById('sso-loading').style.display='none';
+    alert('로그인 중 오류가 발생했습니다: ' + e.message);
+  }
+}
+
+function signOut() {
+  msalInstance.logoutRedirect();
+}
+
+// ━━ 로그인 완료 후 처리 ━━━━━━━━━━━━━━━━━━
+async function onSignedIn(account) {
+  const email = (account.username||'').toLowerCase().trim();
+  const normEmail = norm(email);
+
+  // SSO 뱃지 표시
+  const ssoUser = document.getElementById('sso-user');
+  ssoUser.style.display='inline-block';
+  ssoUser.textContent = account.username;
+
+  // 1차/2차 평가자 확인
+  const firstMappings  = mappings.filter(m=>m.evalEmail===normEmail);
+  const secondMappings = mappings.filter(m=>m.secondEvalEmail && m.secondEvalEmail===normEmail);
+
+  if(!firstMappings.length && !secondMappings.length) {
+    document.getElementById('not-ready-panel').style.display='block';
+    document.getElementById('not-ready-panel').querySelector('.not-ready-desc')||
+    (document.getElementById('not-ready-panel').innerHTML=`<div class="card"><div style="text-align:center;padding:3rem 2rem;"><div style="font-size:48px;margin-bottom:1rem;">⚠️</div><div style="font-size:18px;font-weight:700;margin-bottom:8px;">매핑된 피평가자가 없습니다</div><div style="font-size:14px;color:var(--muted);line-height:1.7;">${email}<br>이 이메일로 등록된 평가 대상자가 없어요. HR 담당자에게 문의해 주세요.</div></div></div>`);
+    return;
+  }
+
+  isSecond = secondMappings.length > 0 && firstMappings.length === 0;
+
+  // 평가자 정보 조회
+  const evRow = Object.values(hrMap).find(row=>norm(getVal(row,COLS.email))===normEmail);
+  const evName  = evRow ? getVal(evRow,COLS.name)  : account.name || email.split('@')[0];
+  const evDept  = evRow ? getVal(evRow,COLS.dept)  : '';
+  const evGrade = evRow ? getVal(evRow,COLS.grade) : '';
+  const evId    = evRow ? getVal(evRow,COLS.id)    : '';
+
+  evaluator = { name:evName, dept:evDept, grade:evGrade, id:evId, email };
+
+  // 피평가자 목록
+  const targetIds = isSecond ? secondMappings.map(m=>m.targetId) : firstMappings.map(m=>m.targetId);
+  const targets   = targetIds.map(id=>hrMap[id]).filter(Boolean);
+
+  const subs = getSubmissions();
+  subjects = targets.map((row,i) => {
+    const subId = getVal(row,COLS.id);
+    const firstSub = subs.find(s=>s.targetId===subId);
+    return {
+      idx:i, id:subId,
+      name:getVal(row,COLS.name), dept:getVal(row,COLS.dept),
+      role:getVal(row,COLS.role), start:getVal(row,COLS.startDate),
+      end:getVal(row,COLS.endDate), partnerLevel:getVal(row,COLS.partnerLevel),
+      perfGrade:getVal(row,COLS.perfGrade), compGrade:getVal(row,COLS.compGrade),
+      firstDecision:firstSub?.decision||'',
+      firstOpinion:firstSub?.opinion||'',
+      firstEvalName:firstSub?.evalName||'',
+      decision:'', _opinion:''
+    };
+  });
+
+  // UI 업데이트
+  const av = document.getElementById('ev-av');
+  av.textContent = (evName||'?')[0];
+  av.className   = 'ev-avatar'+(isSecond?' second':'');
+  document.getElementById('ev-nm').textContent = evName||'-';
+  document.getElementById('ev-mt').textContent = [evDept,evGrade].filter(Boolean).join(' · ');
+  document.getElementById('ev-id').textContent = evId||'-';
+  document.getElementById('ev-gr').textContent = evGrade||'-';
+  document.getElementById('ev-ep').textContent = email;
+  document.getElementById('ev-ts').innerHTML   = `담당 피평가자 <strong>${subjects.length}명</strong> — ${subjects.map(s=>s.name).join(', ')}`;
+  document.getElementById('my-email').value    = email;
+
+  const pill = document.getElementById('role-pill');
+  pill.style.display = 'inline-block';
+  if(isSecond) {
+    pill.className = 'role-pill pill-2nd';
+    pill.textContent = '2차 평가자';
+    const notice = document.getElementById('second-notice');
+    notice.style.display = 'block';
+    notice.innerHTML = `<strong>2차 평가자로 접속하셨습니다.</strong><br>1차 평가자의 내용을 참고하여 최종 재신임 여부를 결정해 주세요.`;
+  } else {
+    pill.className = 'role-pill pill-1st';
+    pill.textContent = '1차 평가자';
+  }
+
+  goStep(2);
+}
+
+// ━━ 스텝 전환 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function goStep(n) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  [1,2,3].forEach(i=>{
+    const el=document.getElementById('si-'+i);
+    el.classList.remove('active','done');
+    if(i<n) el.classList.add('done'); else if(i===n) el.classList.add('active');
+  });
+  if(n===3) renderTable();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ━━ 제출 데이터 관리 ━━━━━━━━━━━━━━━━━━━━
+function getSubmissions(){try{return JSON.parse(localStorage.getItem(SK_SUB)||'[]');}catch(e){return[];}}
+function saveSubmission(data){
+  const subs=getSubmissions();
+  data.forEach(d=>{
+    const idx=subs.findIndex(s=>s.targetId===d.targetId&&s.evalEmail===d.evalEmail);
+    if(idx>=0) subs[idx]=d; else subs.push(d);
+  });
+  localStorage.setItem(SK_SUB,JSON.stringify(subs));
+}
+
+// ━━ 테이블 렌더링 ━━━━━━━━━━━━━━━━━━━━━━
+function gradeBadge(val){
+  if(!val||val==='-') return '<span class="grade-badge">-</span>';
+  return `<span class="grade-badge ${val.toLowerCase()}">${val}</span>`;
+}
+function fmtPeriod(s,e){
+  const fmt=v=>{if(!v)return'-';const d=new Date(v);if(isNaN(d))return v;return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`;};
+  return (!s&&!e)?'-':`${fmt(s)}~${fmt(e)}`;
+}
+function setDecision(idx,d){
+  const ta=document.getElementById('op-'+idx);
+  if(ta) subjects[idx]._opinion=ta.value;
+  subjects[idx].decision=d;
+  const row=document.getElementById('tr-'+idx); if(!row)return;
+  row.querySelectorAll('.d-btn-sm').forEach(btn=>{
+    btn.classList.remove('sel-renew','sel-end');
+    if(btn.dataset.d===d) btn.classList.add('sel-'+d);
+  });
+  updateSummary();
+}
+function updateSummary(){
+  const counts={renew:0,end:0};
+  subjects.forEach(s=>{if(s.decision)counts[s.decision]++;});
+  document.getElementById('summary-row').innerHTML=
+    [counts.renew&&`<span class="s-badge s-renew">재계약 ${counts.renew}명</span>`,
+     counts.end&&`<span class="s-badge s-end">계약종료 ${counts.end}명</span>`].filter(Boolean).join('');
+}
+function updateCounter(i){
+  const ta=document.getElementById('op-'+i),cc=document.getElementById('cc-'+i);
+  const len=ta.value.length;
+  cc.textContent=`${len} / ${MAX_CHARS}`;
+  cc.className='char-info'+(len>=MAX_CHARS?' over':len>=MAX_CHARS*0.9?' warn':'');
+  subjects[i]._opinion=ta.value;
+}
+
+function renderTable() {
+  document.getElementById('count-tag').textContent=subjects.length+'명';
+  if(isSecond){
+    const pending=subjects.filter(s=>!s.firstDecision);
+    const pw=document.getElementById('pending-warning');
+    if(pending.length){pw.style.display='block';pw.innerHTML=`⚠️ 1차 평가 미완료 대상자: <strong>${pending.map(s=>s.name).join(', ')}</strong>`;}
+    else pw.style.display='none';
+    document.getElementById('step3-title').textContent='2차 최종 평가 작성';
+    document.getElementById('step3-sub').textContent='1차 평가 내용을 참고하여 최종 재신임 여부를 결정해 주세요.';
+    document.getElementById('btn-submit').className='btn-submit second';
+  }
+  updateSummary();
+
+  // 헤더
+  const thead=document.getElementById('eval-thead');
+  if(isSecond){
+    thead.innerHTML=`<tr>
+      <th style="width:36px;">#</th><th>이름</th><th>소속</th><th>직무</th>
+      <th>파트너레벨</th><th>계약기간</th><th>성과등급</th><th>역량등급</th>
+      <th class="th-2nd">1차 재신임</th>
+      <th class="th-2nd" style="min-width:200px;">1차 결정 사유</th>
+      <th style="width:160px;">2차 재신임 <span style="color:#F0997B">*</span></th>
+      <th style="min-width:320px;">2차 결정 사유</th>
+    </tr>`;
+  } else {
+    thead.innerHTML=`<tr>
+      <th style="width:36px;">#</th><th>이름</th><th>소속</th><th>직무</th>
+      <th>파트너레벨</th><th>계약기간</th><th>성과등급</th><th>역량등급</th>
+      <th style="width:160px;">재신임 여부 <span style="color:#F0997B">*</span></th>
+      <th style="min-width:320px;">결정 사유</th>
+    </tr>`;
+  }
+
+  // 바디
+  document.getElementById('eval-tbody').innerHTML=subjects.map((s,i)=>{
+    const isR=s.decision==='renew', isE=s.decision==='end';
+    const firstTag=s.firstDecision
+      ?`<span class="first-decision-tag ${s.firstDecision==='renew'?'first-renew':'first-end'}">${s.firstDecision==='renew'?'재계약':'계약종료'}</span>`
+      :`<span class="first-decision-tag first-none">미제출</span>`;
+    const common=`
+      <td style="color:var(--hint);font-size:12px;text-align:center;">${i+1}</td>
+      <td><span class="readonly-val">${s.name||'-'}</span></td>
+      <td><span class="readonly-val">${s.dept||'-'}</span></td>
+      <td><span class="readonly-val muted">${s.role||'-'}</span></td>
+      <td style="text-align:center;">${gradeBadge(s.partnerLevel)}</td>
+      <td><span class="readonly-val muted" style="font-size:12px;">${fmtPeriod(s.start,s.end)}</span></td>
+      <td style="text-align:center;">${gradeBadge(s.perfGrade)}</td>
+      <td style="text-align:center;">${gradeBadge(s.compGrade)}</td>`;
+    const decisionCol=`<td><div class="decision-cell">
+      <button class="d-btn-sm${isR?' sel-renew':''}" data-d="renew" onclick="setDecision(${i},'renew')"><div class="d-icon">✅</div><div class="d-label">재계약</div></button>
+      <button class="d-btn-sm${isE?' sel-end':''}" data-d="end" onclick="setDecision(${i},'end')"><div class="d-icon">🔚</div><div class="d-label">계약종료</div></button>
+    </div></td>`;
+    const opinionCol=`<td>
+      <textarea class="opinion-input" id="op-${i}" rows="4" maxlength="${MAX_CHARS}"
+        placeholder="결정 사유 입력..." oninput="updateCounter(${i})">${s._opinion||''}</textarea>
+      <div class="char-info" id="cc-${i}">${(s._opinion||'').length} / ${MAX_CHARS}</div>
+    </td>`;
+    if(isSecond){
+      return `<tr id="tr-${i}">${common}<td>${firstTag}</td>
+        <td><div class="first-readonly">${s.firstOpinion||'(미작성)'}</div>${s.firstEvalName?`<div style="font-size:11px;color:var(--hint);margin-top:4px;">작성: ${s.firstEvalName}</div>`:''}</td>
+        ${decisionCol}${opinionCol}</tr>`;
+    }
+    return `<tr id="tr-${i}">${common}${decisionCol}${opinionCol}</tr>`;
+  }).join('');
+}
+
+// ━━ SharePoint 저장 ━━━━━━━━━━━━━━━━━━━━━━
+async function saveToSharePoint(rows, evalDate, role) {
+  if(!accessToken) return false;
+
+  // SharePoint 사이트 ID 조회
+  const siteRes = await fetch(
+    `https://graph.microsoft.com/v1.0/sites/blueholestudio.sharepoint.com:/sites/KP_workspace`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if(!siteRes.ok) throw new Error('SharePoint 사이트 접근 실패');
+  const site = await siteRes.json();
+
+  // 목록 ID 조회
+  const listsRes = await fetch(
+    `https://graph.microsoft.com/v1.0/sites/${site.id}/lists?$filter=displayName eq '${encodeURIComponent(SP_LIST)}'`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const lists = await listsRes.json();
+  if(!lists.value?.length) throw new Error('SharePoint 목록을 찾을 수 없습니다');
+  const listId = lists.value[0].id;
+
+  // 각 피평가자 데이터 저장
+  const pad = n=>String(n).padStart(2,'0');
+  const fmtD = v=>{if(!v)return'-';const d=new Date(v);if(isNaN(d))return v;return`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;};
+
+  for(const row of rows) {
+    const fields = {
+      fields: {
+        Title:        evaluator.name,
+        평가자이메일:   evaluator.email,
+        평가자부서:     evaluator.dept||'',
+        피평가자명:     row.name,
+        피평가자부서:   row.dept||'',
+        직무:          row.role||'',
+        평가결정:       row.decision==='renew'?'재계약':'계약종료',
+        평가의견:       row.opinion||'',
+        제출일시:       new Date().toISOString(),
+      }
+    };
+    await fetch(
+      `https://graph.microsoft.com/v1.0/sites/${site.id}/lists/${listId}/items`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields)
+      }
+    );
+  }
+  return true;
+}
+
+// ━━ 제출 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const pad  = n=>String(n).padStart(2,'0');
+const fmtD = v=>{if(!v)return'-';const d=new Date(v);if(isNaN(d))return v;return`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;};
+
+async function submitAll() {
+  if(!evaluator){alert('평가자 정보가 없습니다.');return;}
+  const myEmail  = document.getElementById('my-email').value.trim();
+  const evalDate = document.getElementById('eval-date').value;
+  if(!myEmail){alert('확인 메일 수신 주소를 입력해 주세요.');return;}
+
+  const dlabel={renew:'✅ 재계약',end:'🔚 계약종료'};
+  const rows=[];
+  for(let i=0;i<subjects.length;i++){
+    const s=subjects[i];
+    const ta=document.getElementById('op-'+i);
+    const opinion=(ta?ta.value:s._opinion||'').trim()||'(없음)';
+    if(!s.decision){alert(`"${s.name}"의 재신임 여부를 선택해 주세요.`);return;}
+    rows.push({...s,decisionLabel:dlabel[s.decision],opinion});
+  }
+
+  // 1차 평가자면 localStorage에도 저장
+  if(!isSecond){
+    saveSubmission(rows.map(r=>({
+      targetId:r.id, evalEmail:evaluator.email, evalName:evaluator.name,
+      decision:r.decision, opinion:r.opinion, submittedAt:new Date().toISOString()
+    })));
+  }
+
+  // SharePoint 저장 시도
+  const progress = document.getElementById('submit-progress');
+  const progressText = document.getElementById('progress-text');
+  progress.classList.add('show');
+  progressText.textContent = 'SharePoint에 저장 중...';
+  document.getElementById('btn-submit').disabled = true;
+
+  let spSaved = false;
+  try {
+    spSaved = await saveToSharePoint(rows, evalDate, isSecond?'2차':'1차');
+    if(spSaved) progressText.textContent = '✅ SharePoint 저장 완료! Outlook 이메일 초안 열기...';
+  } catch(e) {
+    progressText.textContent = '⚠️ SharePoint 저장 실패 — 이메일 초안으로 전환합니다.';
+    console.error('SharePoint 저장 오류:', e);
+    await new Promise(r=>setTimeout(r,1500));
+  }
+
+  // 이메일 초안 생성
+  const role = isSecond?'2차':'1차';
+  const subj = `[계약 갱신 평가 - ${role}] ${evaluator.name} · ${fmtD(evalDate)} · 총 ${rows.length}명`;
+  let body = `계약 갱신 평가 결과 (${role} 평가)\n${'='.repeat(52)}\n`;
+  body += `평가자  : ${evaluator.name}${evaluator.dept?' ('+evaluator.dept+')':''}${evaluator.grade?' · '+evaluator.grade:''}\n`;
+  body += `구분    : ${role} 평가자\n사번    : ${evaluator.id||'-'}\n평가일자: ${fmtD(evalDate)}\n총 대상자: ${rows.length}명\n\n`;
+  rows.forEach((r,i)=>{
+    body+=`[피평가자 ${i+1}] ${r.name}\n`;
+    body+=`  소속 / 직무      : ${r.dept||'-'} / ${r.role||'-'}\n`;
+    body+=`  파트너레벨 등급  : ${r.partnerLevel||'-'}\n`;
+    body+=`  계약 기간        : ${fmtD(r.start)} ~ ${fmtD(r.end)}\n`;
+    body+=`  성과 / 역량 등급 : ${r.perfGrade||'-'} / ${r.compGrade||'-'}\n`;
+    if(isSecond&&r.firstDecision){
+      body+=`  1차 재신임       : ${r.firstDecision==='renew'?'재계약':'계약종료'} (${r.firstEvalName||'1차평가자'})\n`;
+      body+=`  1차 결정 사유    : ${r.firstOpinion||'(없음)'}\n`;
+    }
+    body+=`  재신임 여부      : ${r.decisionLabel}\n`;
+    body+=`  결정 사유        : ${r.opinion}\n`;
+    body+=`${'-'.repeat(48)}\n`;
+  });
+  body+=`\n${spSaved?'✅ SharePoint 자동 저장 완료':'⚠️ SharePoint 저장 실패 — 이 이메일을 보관해 주세요.'}\n이 메일은 계약 갱신 평가 시스템에서 자동 생성되었습니다.`;
+
+  setTimeout(()=>{
+    window.location.href=`mailto:${myEmail}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+  }, 1000);
+
+  // 성공 표시
+  const box=document.getElementById('success-box');
+  document.getElementById('success-title').textContent=`총 ${rows.length}명의 ${role} 평가 완료${spSaved?' · SharePoint 저장됨':''}`;
+  document.getElementById('success-items').innerHTML=rows.map(r=>{
+    const cls=r.decision==='renew'?'renew':'end';
+    return `<div class="success-item"><span>${r.name} · ${r.dept||'-'}</span><span class="s-tag ${cls}">${r.decisionLabel.replace(/[✅🔚]/g,'').trim()}</span></div>`;
+  }).join('');
+  box.style.display='block';
+  progress.classList.remove('show');
+  document.getElementById('btn-submit').disabled=false;
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+document.getElementById('eval-date').valueAsDate=new Date();
+init();
+</script>
+</body>
+</html>
