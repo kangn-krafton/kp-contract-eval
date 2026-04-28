@@ -161,16 +161,63 @@ function processFile(file) {
     try {
       const wb = XLSX.read(e.target.result, {type:'array'});
 
-      // 인사마스터 시트
-      const ws1name = wb.SheetNames.find(n=>n.includes('인사마스터')||n.toLowerCase().includes('master')) || wb.SheetNames[0];
-      const hr = XLSX.utils.sheet_to_json(wb.Sheets[ws1name], {defval:''});
-      if(!hr.length){showErr('인사마스터 시트에 데이터가 없습니다.');return;}
-      const hdrs1 = Object.keys(hr[0]);
-      const colId = findCol(hdrs1, COLS.id);
-      const colEm = findCol(hdrs1, COLS.email);
-      if(!colId||!colEm){showErr('"사번" 또는 "이메일" 컬럼을 찾을 수 없습니다.');return;}
+      // 책임파트너 / 전문계약직 시트 처리
+      const sheetNames = wb.SheetNames;
+      const partnerSheet   = sheetNames.find(n=>n.includes('책임파트너')||n.toLowerCase().includes('partner'));
+      const contractSheet  = sheetNames.find(n=>n.includes('전문계약직')||n.toLowerCase().includes('contract'));
+      const legacySheet    = sheetNames.find(n=>n.includes('인사마스터')||n.toLowerCase().includes('master'));
+
       const hrMap = {};
-      hr.forEach(row=>{const id=String(row[colId]||'').trim();if(id)hrMap[id]=row;});
+
+      function parseSheet(sheetName, sheetLabel) {
+        if(!sheetName) return 0;
+        const ws = wb.Sheets[sheetName];
+        // 섹션 헤더(▶)를 건너뛰고 실제 데이터 헤더 행 찾기
+        const allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        let count = 0;
+        let headers = null;
+        let currentReviewType = '재신임'; // 기본값
+        for(let i=0; i<allRows.length; i++) {
+          const row = allRows[i];
+          const firstCell = String(row[0]||'');
+          // 빈 행 건너뛰기
+          if(row.every(c=>!c)) continue;
+          // 섹션 헤더 행 — 검토유형 갱신
+          if(firstCell.startsWith('▶')) {
+            if(firstCell.includes('신규')) currentReviewType = '신규 추천';
+            else currentReviewType = '재신임';
+            headers = null; // 다음 행을 새 헤더로
+            continue;
+          }
+          if(!headers) {
+            // 헤더 행
+            headers = row.map(h=>String(h||''));
+            continue;
+          }
+          // 데이터 행
+          const rowObj = {};
+          headers.forEach((h,j) => { rowObj[h] = String(row[j]||''); });
+          const colId = findCol(headers, COLS.id);
+          if(!colId) continue;
+          const id = String(rowObj[colId]||'').trim();
+          if(id) {
+            hrMap[id] = {...rowObj, '__sheet__': sheetLabel||sheetName, '검토유형': currentReviewType};
+            count++;
+          }
+        }
+        return count;
+      }
+
+      let total = 0;
+      if(partnerSheet||contractSheet) {
+        total += parseSheet(partnerSheet, '책임파트너');
+        total += parseSheet(contractSheet, '전문계약직');
+      } else if(legacySheet) {
+        total += parseSheet(legacySheet, '책임파트너'); // 기존 단일 시트 호환
+      } else {
+        showErr('인사마스터 시트를 찾을 수 없습니다. "책임파트너" 또는 "전문계약직" 시트가 필요합니다.');return;
+      }
+      if(!total){showErr('인사마스터 데이터가 없습니다.');return;}
 
       // 평가자매핑 시트
       const ws2name = wb.SheetNames.find(n=>n.includes('매핑')||n.toLowerCase().includes('mapping'));
