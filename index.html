@@ -150,77 +150,7 @@ input::placeholder{color:var(--hint);}
 .empty-section{text-align:center;padding:2rem;color:var(--hint);font-size:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
 .pending-warning{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--amber);margin-bottom:12px;display:none;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js">
-// ── MSAL SSO ─────────────────────────────────────────────
-const CLIENT_ID = '76ae89f8-7fdb-42ba-a337-9a2538e418b0';
-const TENANT_ID = '1a27bdbf-e6cc-4e33-85d2-e1c81bad930a';
-
-let msalInstance = null;
-
-async function initMSAL() {
-  try {
-    const config = {
-      auth: {
-        clientId: CLIENT_ID,
-        authority: 'https://login.microsoftonline.com/' + TENANT_ID,
-        redirectUri: 'https://kangn-krafton.github.io/kp-contract-eval/',
-      },
-      cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
-    };
-    msalInstance = new msal.PublicClientApplication(config);
-    await msalInstance.initialize();
-
-    // 리다이렉트 결과 처리
-    const result = await msalInstance.handleRedirectPromise();
-    if (result) {
-      await onSignedIn(result.account);
-      return;
-    }
-
-    // 기존 세션 확인
-    const accounts = msalInstance.getAllAccounts();
-    if (accounts.length > 0) {
-      try {
-        await msalInstance.acquireTokenSilent({ scopes: ['User.Read'], account: accounts[0] });
-        await onSignedIn(accounts[0]);
-        return;
-      } catch(e) {}
-    }
-
-    // 로그인 화면 표시
-    goStep(0);
-  } catch(e) {
-    console.error('MSAL 초기화 오류:', e);
-    // MSAL 실패 시 기존 이메일 입력 방식으로 폴백
-    goStep(1);
-  }
-}
-
-async function ssoSignIn() {
-  document.getElementById('sso-loading').style.display = 'block';
-  try {
-    await msalInstance.loginRedirect({ scopes: ['User.Read'] });
-  } catch(e) {
-    document.getElementById('sso-loading').style.display = 'none';
-    alert('로그인 중 오류: ' + e.message);
-  }
-}
-
-function ssoSignOut() {
-  if(msalInstance) msalInstance.logoutRedirect();
-}
-
-async function onSignedIn(account) {
-  const email = (account.username || '').toLowerCase().trim();
-  // 이메일 입력란에 자동 입력
-  document.getElementById('ev-email-input').value = email;
-  document.getElementById('my-email').value = email;
-  // 자동으로 평가자 조회
-  goStep(1);
-  lookupEvaluator();
-}
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js"></script>
 </head>
 <body>
 <header class="header">
@@ -784,6 +714,75 @@ async function submitAll() {
 }
 
 function showErr(id,msg){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.classList.toggle('show',!!msg);}
+// ── MSAL SSO ─────────────────────────────────────────────
+const CLIENT_ID = '76ae89f8-7fdb-42ba-a337-9a2538e418b0';
+const TENANT_ID = '1a27bdbf-e6cc-4e33-85d2-e1c81bad930a';
+
+let msalInstance = null;
+
+async function initMSAL() {
+  try {
+    const config = {
+      auth: {
+        clientId: CLIENT_ID,
+        authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+        redirectUri: 'https://kangn-krafton.github.io/kp-contract-eval/',
+      },
+      cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+    };
+    msalInstance = new msal.PublicClientApplication(config);
+    await msalInstance.initialize();
+
+    // 리다이렉트 결과 처리
+    const result = await msalInstance.handleRedirectPromise();
+    if (result) {
+      await onSignedIn(result.account);
+      return;
+    }
+
+    // 기존 세션 확인
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      try {
+        await msalInstance.acquireTokenSilent({ scopes: ['User.Read'], account: accounts[0] });
+        await onSignedIn(accounts[0]);
+        return;
+      } catch(e) {}
+    }
+
+    // 로그인 화면 표시
+    goStep(0);
+  } catch(e) {
+    console.error('MSAL 초기화 오류:', e);
+    // MSAL 실패 시 기존 이메일 입력 방식으로 폴백
+    goStep(1);
+  }
+}
+
+async function ssoSignIn() {
+  document.getElementById('sso-loading').style.display = 'block';
+  try {
+    await msalInstance.loginRedirect({ scopes: ['User.Read'] });
+  } catch(e) {
+    document.getElementById('sso-loading').style.display = 'none';
+    alert('로그인 중 오류: ' + e.message);
+  }
+}
+
+function ssoSignOut() {
+  if(msalInstance) msalInstance.logoutRedirect();
+}
+
+async function onSignedIn(account) {
+  const email = (account.username || '').toLowerCase().trim();
+  // 이메일 입력란에 자동 입력
+  document.getElementById('ev-email-input').value = email;
+  document.getElementById('my-email').value = email;
+  // 자동으로 평가자 조회
+  goStep(1);
+  lookupEvaluator();
+}
+
 document.getElementById('eval-date').valueAsDate=new Date();
 loadAdminData();
 // MSAL 라이브러리 로드 완료 후 실행
