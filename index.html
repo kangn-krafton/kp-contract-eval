@@ -150,6 +150,77 @@ input::placeholder{color:var(--hint);}
 .empty-section{text-align:center;padding:2rem;color:var(--hint);font-size:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
 .pending-warning{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--amber);margin-bottom:12px;display:none;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.27.0/lib/msal-browser.min.js">
+// ── MSAL SSO ─────────────────────────────────────────────
+const CLIENT_ID = '76ae89f8-7fdb-42ba-a337-9a2538e418b0';
+const TENANT_ID = '1a27bdbf-e6cc-4e33-85d2-e1c81bad930a';
+
+let msalInstance = null;
+
+async function initMSAL() {
+  try {
+    const config = {
+      auth: {
+        clientId: CLIENT_ID,
+        authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+        redirectUri: 'https://kangn-krafton.github.io/kp-contract-eval/',
+      },
+      cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+    };
+    msalInstance = new msal.PublicClientApplication(config);
+    await msalInstance.initialize();
+
+    // 리다이렉트 결과 처리
+    const result = await msalInstance.handleRedirectPromise();
+    if (result) {
+      await onSignedIn(result.account);
+      return;
+    }
+
+    // 기존 세션 확인
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      try {
+        await msalInstance.acquireTokenSilent({ scopes: ['User.Read'], account: accounts[0] });
+        await onSignedIn(accounts[0]);
+        return;
+      } catch(e) {}
+    }
+
+    // 로그인 화면 표시
+    goStep(0);
+  } catch(e) {
+    console.error('MSAL 초기화 오류:', e);
+    // MSAL 실패 시 기존 이메일 입력 방식으로 폴백
+    goStep(1);
+  }
+}
+
+async function ssoSignIn() {
+  document.getElementById('sso-loading').style.display = 'block';
+  try {
+    await msalInstance.loginRedirect({ scopes: ['User.Read'] });
+  } catch(e) {
+    document.getElementById('sso-loading').style.display = 'none';
+    alert('로그인 중 오류: ' + e.message);
+  }
+}
+
+function ssoSignOut() {
+  if(msalInstance) msalInstance.logoutRedirect();
+}
+
+async function onSignedIn(account) {
+  const email = (account.username || '').toLowerCase().trim();
+  // 이메일 입력란에 자동 입력
+  document.getElementById('ev-email-input').value = email;
+  document.getElementById('my-email').value = email;
+  // 자동으로 평가자 조회
+  goStep(1);
+  lookupEvaluator();
+}
+
+</script>
 </head>
 <body>
 <header class="header">
@@ -160,8 +231,9 @@ input::placeholder{color:var(--hint);}
 </header>
 <nav class="steps-bar">
   <div class="steps-inner">
-    <div class="step-item active" id="si-1"><div class="step-num">1</div>평가자 확인</div>
-    <div class="step-item" id="si-2"><div class="step-num">2</div>평가 작성 및 제출</div>
+    <div class="step-item active" id="si-0"><div class="step-num">1</div>로그인</div>
+    <div class="step-item" id="si-1"><div class="step-num">2</div>평가자 확인</div>
+    <div class="step-item" id="si-2"><div class="step-num">3</div>평가 작성 및 제출</div>
     <div class="step-div"></div>
   </div>
 </nav>
@@ -173,6 +245,25 @@ input::placeholder{color:var(--hint);}
       <div style="font-size:18px;font-weight:700;margin-bottom:8px;">관리자 설정이 필요합니다</div>
       <div style="font-size:14px;color:var(--muted);line-height:1.7;">HR 담당자에게 인사마스터 업로드를 요청해 주세요.</div>
     </div></div>
+  </div>
+
+
+  <!-- SSO 로그인 패널 -->
+  <div id="panel-sso" class="panel active">
+    <div class="card">
+      <div style="text-align:center;padding:3rem 2rem;">
+        <div style="font-size:48px;margin-bottom:1rem;">🔐</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">사내 계정으로 로그인</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;">
+          Microsoft 사내 계정으로 로그인하면<br>본인 이메일이 자동으로 인식됩니다.
+        </div>
+        <button onclick="ssoSignIn()" style="display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border-radius:8px;border:none;background:#0078d4;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">
+          <svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
+          Microsoft 계정으로 로그인
+        </button>
+        <div id="sso-loading" style="display:none;font-size:13px;color:var(--muted);margin-top:12px;">로그인 중...</div>
+      </div>
+    </div>
   </div>
 
   <!-- STEP 1 -->
@@ -357,8 +448,14 @@ function loadAdminData() {
 // ── 스텝 전환 ─────────────────────────────────────────────
 function goStep(n) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+n).classList.add('active');
-  [1,2].forEach(i=>{ const el=document.getElementById('si-'+i); el.classList.remove('active','done'); if(i<n)el.classList.add('done'); else if(i===n)el.classList.add('active'); });
+  const panelId = n===0 ? 'panel-sso' : 'panel-'+n;
+  document.getElementById(panelId).classList.add('active');
+  [0,1,2].forEach(i=>{
+    const el=document.getElementById('si-'+i);
+    if(!el) return;
+    el.classList.remove('active','done');
+    if(i<n) el.classList.add('done'); else if(i===n) el.classList.add('active');
+  });
   if(n===2) renderAll();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -689,6 +786,7 @@ async function submitAll() {
 function showErr(id,msg){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.classList.toggle('show',!!msg);}
 document.getElementById('eval-date').valueAsDate=new Date();
 loadAdminData();
+initMSAL();
 </script>
 </body>
 </html>
