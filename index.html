@@ -365,9 +365,13 @@ function loadAdminData() {
     // 책임파트너 / 전문계약직 분리
     Object.entries(hrAll).forEach(([id, row]) => {
       const sheet = String(row['__sheet__']||'').trim();
-      if(sheet==='책임파트너') hrPartner[id]=row;
-      else if(sheet==='전문계약직') hrContract[id]=row;
-      else hrPartner[id]=row; // 기본값
+      if(sheet==='전문계약직') hrContract[id]=row;
+      else if(sheet==='책임파트너') hrPartner[id]=row;
+      else {
+        // __sheet__ 없는 경우 양쪽 모두에 저장 (조회 누락 방지)
+        hrPartner[id]=row;
+        hrContract[id]=row;
+      }
     });
     mappings = JSON.parse(savedMap);
     document.getElementById('panel-1').classList.add('active');
@@ -400,8 +404,10 @@ function lookupEvaluator() {
   const secondMappings = mappings.filter(m=>m.secondEvalEmail&&m.secondEvalEmail===ne);
   if(!firstMappings.length&&!secondMappings.length){showErr('err-ev','인사마스터에서 해당 이메일 주소를 찾을 수 없습니다.');return;}
 
-  // 2차 매핑이 있으면 2차 평가자 우선 (1차도 겸임 가능)
-  isSecond = secondMappings.length > 0;
+  const hasFirst  = firstMappings.length > 0;
+  const hasSecond = secondMappings.length > 0;
+  // 2차만 있는 경우만 isSecond=true, 1차+2차 겸임이면 false (별도로 처리)
+  isSecond = hasSecond && !hasFirst;
 
   const allHr = {...hrPartner,...hrContract};
   const evRow = Object.values(allHr).find(row=>norm(getVal(row,COLS.email))===ne);
@@ -411,8 +417,14 @@ function lookupEvaluator() {
   const evId    = evRow?getVal(evRow,COLS.id):'';
   evaluator = {name:evName,dept:evDept,grade:evGrade,id:evId,email};
 
-  // 2차 평가자면 2차 담당 대상자만, 1차만이면 1차 담당 대상자
-  const targetIds = isSecond ? secondMappings.map(m=>m.targetId) : firstMappings.map(m=>m.targetId);
+  // 1차+2차 겸임: 두 목록 모두 포함 (role로 구분)
+  // 1차만: 1차 대상자
+  // 2차만: 2차 대상자
+  const firstIds  = firstMappings.map(m=>m.targetId);
+  const secondIds = secondMappings.map(m=>m.targetId).filter(id=>!firstIds.includes(id));
+  const targetIds = hasFirst && hasSecond
+    ? [...firstIds, ...secondIds]
+    : hasFirst ? firstIds : secondMappings.map(m=>m.targetId);
   const subs = getSubmissions();
 
   subjects = targetIds.map((tid,i)=>{
@@ -435,6 +447,7 @@ function lookupEvaluator() {
       perf25:getVal(row,COLS.perf25), comp25:getVal(row,COLS.comp25),
       result25:getVal(row,COLS.result25), collab25:getVal(row,COLS.collab25), skill25:getVal(row,COLS.skill25),
       firstDecision:firstSub?.decision||'', firstOpinion:firstSub?.opinion||'', firstEvalName:firstSub?.evalName||'',
+      role: (hasFirst && hasSecond && secondIds.includes(tid)) ? 'second' : 'first',
       decision:'', _opinion:''
     };
   }).filter(Boolean);
@@ -449,7 +462,7 @@ function lookupEvaluator() {
   document.getElementById('ev-dp').textContent=evDept||'-';
   document.getElementById('ev-ts').innerHTML=`담당 피평가자 <strong>${subjects.length}명</strong> — ${subjects.map(s=>s.name).join(', ')}`;
   document.getElementById('my-email').value=email;
-  if(isSecond){document.getElementById('second-notice').style.display='block';document.getElementById('second-notice').innerHTML='<strong>2차 평가자로 접속하셨습니다.</strong><br>1차 평가자의 내용을 참고하여 최종 의견을 작성해 주세요.';}
+  if(isSecond || s.role==='second'){document.getElementById('second-notice').style.display='block';document.getElementById('second-notice').innerHTML='<strong>2차 평가자로 접속하셨습니다.</strong><br>1차 평가자의 내용을 참고하여 최종 의견을 작성해 주세요.';}
   document.getElementById('ev-card').classList.add('show');
 }
 
@@ -522,9 +535,9 @@ function updateSummary(){
 }
 
 // ── 테이블 헤더/바디 빌더 ─────────────────────────────────
-function buildTh(cols) {
+function buildTh(cols, hasSecondRow) {
   const ths = cols.map(c=>c==='이름'?`<th style="width:90px;">${c}</th>`:`<th>${c}</th>`).join('');
-  if(isSecond) return `<tr><th style="width:36px;">#</th>${ths}<th class="th-2nd">1차</th><th class="th-2nd" style="min-width:160px;">1차 사유</th><th>최종 결정 *</th><th style="min-width:260px;">결정 사유</th></tr>`;
+  if(isSecond || hasSecondRow) return `<tr><th style="width:36px;">#</th>${ths}<th class="th-2nd">1차</th><th class="th-2nd" style="min-width:160px;">1차 사유</th><th>결정 *</th><th style="min-width:260px;">결정 사유</th></tr>`;
   return `<tr><th style="width:36px;">#</th>${ths}<th>결정 *</th><th style="min-width:260px;">결정 사유</th></tr>`;
 }
 
@@ -630,7 +643,8 @@ function renderSection(type, list) {
   const renewCols = isPartner
     ? ['이름','부서','직책','파트너레벨','계약시작일','계약종료일',"성과('25)","역량('25)"]
     : ['이름','부서','직책','역량레벨','계약시작일','계약종료일',"결과('25)","협업('25)","능력('25)"];
-  document.getElementById(`th-${type}-renew`).innerHTML = buildTh(renewCols);
+  const renewHasSecond = renewList.some(s=>s.role==='second');
+  document.getElementById(`th-${type}-renew`).innerHTML = buildTh(renewCols, renewHasSecond);
 
   if(renewList.length){
     document.getElementById(`tb-${type}-renew`).innerHTML = renewList.map((s,i)=>buildRow(s,i,false)).join('');
@@ -644,7 +658,8 @@ function renderSection(type, list) {
   const newCols = isPartner
     ? ['이름','부서','직책','고용형태','역량레벨','입사일',"결과('25)","협업('25)","능력('25)"]
     : ['이름','부서','직책','고용형태','역량레벨','입사일',"결과('25)","협업('25)","능력('25)"];
-  document.getElementById(`th-${type}-new`).innerHTML = buildTh(newCols);
+  const newHasSecond = newList.some(s=>s.role==='second');
+  document.getElementById(`th-${type}-new`).innerHTML = buildTh(newCols, newHasSecond);
 
   if(newList.length){
     document.getElementById(`tb-${type}-new`).innerHTML = newList.map((s,i)=>buildRow(s,i,true)).join('');
