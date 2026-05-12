@@ -352,8 +352,13 @@ const findCol = (hdrs,keys) => { const nh=hdrs.map(h=>norm(h||'')); for(const k 
 const getVal  = (row,keys) => { const col=findCol(Object.keys(row),keys); return col?String(row[col]||'').trim():''; };
 
 let hrPartner={}, hrContract={}, mappings=[];
-let evaluator=null, subjects=[], isSecond=false;
+let hrContract={};
+let subjects=[];
+let mappings=[];
+let isSecond=false;
+let evaluator=null;
 let currentTab='partner';
+
 
 // ── 관리자 데이터 로드 ────────────────────────────────────
 function loadAdminData() {
@@ -603,7 +608,7 @@ function buildRow(s, i, isNewType) {
     <div class="char-info" id="cc-${idx}">${(s._opinion||'').length} / ${MAX_CHARS}</div>
   </td>`;
 
-  if(isSecond){
+  if(isSecond || s.role==='second'){
     const ftag=s.firstDecision?`<span class="first-dtag first-${s.firstDecision}">${s.firstDecision==='renew'?'재신임':s.firstDecision==='recommend'?'추천':'계약종료'}</span>`:
       `<span class="first-dtag first-none">미제출</span>`;
     return `<tr id="tr-${idx}"><td style="color:var(--hint);font-size:12px;text-align:center;">${i+1}</td>${cells}<td>${ftag}</td>
