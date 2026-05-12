@@ -462,7 +462,7 @@ function lookupEvaluator() {
   document.getElementById('ev-dp').textContent=evDept||'-';
   document.getElementById('ev-ts').innerHTML=`담당 피평가자 <strong>${subjects.length}명</strong> — ${subjects.map(s=>s.name).join(', ')}`;
   document.getElementById('my-email').value=email;
-  if(isSecond || s.role==='second'){document.getElementById('second-notice').style.display='block';document.getElementById('second-notice').innerHTML='<strong>2차 평가자로 접속하셨습니다.</strong><br>1차 평가자의 내용을 참고하여 최종 의견을 작성해 주세요.';}
+  if(isSecond || subjects.some(s=>s.role==='second')){document.getElementById('second-notice').style.display='block';document.getElementById('second-notice').innerHTML='<strong>2차 평가자로 접속하셨습니다.</strong><br>1차 평가자의 내용을 참고하여 최종 의견을 작성해 주세요.';}
   document.getElementById('ev-card').classList.add('show');
 }
 
