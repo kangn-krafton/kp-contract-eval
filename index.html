@@ -352,9 +352,7 @@ const findCol = (hdrs,keys) => { const nh=hdrs.map(h=>norm(h||'')); for(const k 
 const getVal  = (row,keys) => { const col=findCol(Object.keys(row),keys); return col?String(row[col]||'').trim():''; };
 
 let hrPartner={}, hrContract={}, mappings=[];
-let hrContract={};
 let subjects=[];
-let mappings=[];
 let isSecond=false;
 let evaluator=null;
 let currentTab='partner';
